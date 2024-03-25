@@ -41,7 +41,39 @@ namespace com.Klazapp.Utility
         {
             onDeviceLocationPermissionCallback = deviceLocationPermissionCallback;
 
+#if UNITY_ANDROID
+            StartCoroutine(CheckAndRequestLocationPermission());
+#else
             StartCoroutine(RequestLocationPermissionCo());
+#endif
+        }
+
+#if UNITY_ANDROID
+        IEnumerator CheckAndRequestLocationPermission()
+        {
+            // Check if the fine location permission has been granted
+            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.FineLocation))
+            {
+                // Request permission
+                UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.FineLocation);
+                // Wait a short period for the user to respond
+                yield return new WaitForSeconds(1);
+            }
+
+            // After waiting, check again. If now granted, proceed to request location updates.
+            if (UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.FineLocation))
+            {
+                StartCoroutine(RequestLocationPermissionCo());
+            }
+            else
+            {
+                // Permission was denied or not granted in time
+                DeviceCameraLocationCallback(false);
+            }
+        }
+#endif
+
+            //StartCoroutine(RequestLocationPermissionCo());
 
             IEnumerator RequestLocationPermissionCo()
             {
