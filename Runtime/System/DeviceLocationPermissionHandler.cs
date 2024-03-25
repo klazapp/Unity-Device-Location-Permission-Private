@@ -43,10 +43,10 @@ namespace com.Klazapp.Utility
 
 #if UNITY_ANDROID
             StartCoroutine(CheckAndRequestLocationPermission());
-#else
+#elif UNITY_IOS
             StartCoroutine(RequestLocationPermissionCo());
 #endif
-        }
+    
 
 #if UNITY_ANDROID
         IEnumerator CheckAndRequestLocationPermission()
