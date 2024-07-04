@@ -38,15 +38,16 @@ namespace com.Klazapp.Utility
         }
         
         public void RequestDeviceLocationPermission(Action<bool, float, float, float, float> deviceLocationPermissionCallback = null)
-        {
-            onDeviceLocationPermissionCallback = deviceLocationPermissionCallback;
-
-#if UNITY_ANDROID
+                {
+                    onDeviceLocationPermissionCallback = deviceLocationPermissionCallback;
+        
+#if UNITY_EDITOR
+        	DeviceCameraLocationCallback(true, 0f, 0f, 0f, 0f);
+#elif UNITY_ANDROID
             StartCoroutine(CheckAndRequestLocationPermission());
 #elif UNITY_IOS
             StartCoroutine(RequestLocationPermissionCo());
 #endif
-    
 
 #if UNITY_ANDROID
         IEnumerator CheckAndRequestLocationPermission()
