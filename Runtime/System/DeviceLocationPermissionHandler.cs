@@ -22,6 +22,15 @@ namespace com.Klazapp.Utility
         //Location accuracy
         private const float DESIRED_ACCURACY_IN_METERS = 1F;
         private const float UPDATE_DISTANCE_IN_METERS = 0.001F;
+        
+        //Continuous update
+        private bool isContinuousUpdateActive = false;
+        private float currentContinuousUpdateDuration = 0f;
+        private const float MAX_CONTINUOUS_UPDATE_DURATION = 60F;
+        private float continuousUpdateLatitude;
+        private float continuousUpdateLongitude;
+        private float continuousUpdateAltitude;
+        private float continuousUpdateHorizontalAccuracy;
         #endregion
         
         #region Lifecycle Flow
@@ -38,11 +47,11 @@ namespace com.Klazapp.Utility
         }
         
         public void RequestDeviceLocationPermission(Action<bool, float, float, float, float> deviceLocationPermissionCallback = null)
-                {
-                    onDeviceLocationPermissionCallback = deviceLocationPermissionCallback;
+        {
+            onDeviceLocationPermissionCallback = deviceLocationPermissionCallback;
         
 #if UNITY_EDITOR
-        	DeviceCameraLocationCallback(true, 0f, 0f, 0f, 0f);
+            DeviceCameraLocationCallback(true, 0f, 0f, 0f, 0f);
 #elif UNITY_ANDROID
             StartCoroutine(CheckAndRequestLocationPermission());
 #elif UNITY_IOS
@@ -109,9 +118,54 @@ namespace com.Klazapp.Utility
                 DeviceCameraLocationCallback(true, Input.location.lastData.latitude, Input.location.lastData.longitude, Input.location.lastData.altitude, Input.location.lastData.horizontalAccuracy);
             }
         }
+        
+        public void StartContinuousLocationUpdate()
+        {
+            currentContinuousUpdateDuration = 0f;
+            isContinuousUpdateActive = true;
+            StartCoroutine(UpdateContinuousLocationCo());
+        }
+
+        public void StopContinuousLocationUpdate()
+        {
+            isContinuousUpdateActive = false;
+            StopCoroutine(UpdateContinuousLocationCo());
+        }
+
+        public (float latitude, float longitude, float altitude, float horizontalAccuracy) GetContinuousLocationInfo()
+        {
+            return (continuousUpdateLatitude, continuousUpdateLongitude, continuousUpdateAltitude,
+                continuousUpdateHorizontalAccuracy);
+        }
         #endregion
         
         #region Modules
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private IEnumerator UpdateContinuousLocationCo()
+        {
+            while (isContinuousUpdateActive && currentContinuousUpdateDuration < MAX_CONTINUOUS_UPDATE_DURATION)
+            {
+                currentContinuousUpdateDuration += Time.deltaTime;
+
+                if (Input.location.status == LocationServiceStatus.Running)
+                {
+                    
+                    continuousUpdateLatitude = Input.location.lastData.latitude;
+                    continuousUpdateLongitude = Input.location.lastData.longitude;
+                    continuousUpdateAltitude = Input.location.lastData.altitude;
+                    continuousUpdateHorizontalAccuracy = Input.location.lastData.horizontalAccuracy;
+                }
+                else
+                {
+                    Debug.LogWarning("Location service is not running");
+                }
+
+                yield return null;
+            }
+
+            isContinuousUpdateActive = false;
+        }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetScriptBehaviour(ScriptBehavior behavior)
         {
