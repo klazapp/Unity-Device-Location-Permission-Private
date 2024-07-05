@@ -31,6 +31,7 @@ namespace com.Klazapp.Utility
         private float continuousUpdateLongitude;
         private float continuousUpdateAltitude;
         private float continuousUpdateHorizontalAccuracy;
+        private event Action<bool> OnContinuousUpdateStatusChanged;
         #endregion
         
         #region Lifecycle Flow
@@ -119,17 +120,17 @@ namespace com.Klazapp.Utility
             }
         }
         
-        public void StartContinuousLocationUpdate()
+        public void StartContinuousLocationUpdate(Action<bool> onContinuousUpdateStatusChanged)
         {
             currentContinuousUpdateDuration = 0f;
             isContinuousUpdateActive = true;
-            StartCoroutine(UpdateContinuousLocationCo());
+            StartCoroutine(UpdateContinuousLocationCo(onContinuousUpdateStatusChanged));
         }
 
         public void StopContinuousLocationUpdate()
         {
             isContinuousUpdateActive = false;
-            StopCoroutine(UpdateContinuousLocationCo());
+            StopCoroutine(UpdateContinuousLocationCo(null));
         }
 
         public (float latitude, float longitude, float altitude, float horizontalAccuracy) GetContinuousLocationInfo()
@@ -141,15 +142,44 @@ namespace com.Klazapp.Utility
         
         #region Modules
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerator UpdateContinuousLocationCo()
-        {
+        private IEnumerator UpdateContinuousLocationCo(Action<bool> onContinuousUpdateStatusChanged)
+        { 
+            if (onContinuousUpdateStatusChanged != null)
+            {
+                OnContinuousUpdateStatusChanged = onContinuousUpdateStatusChanged;
+            }
+            
+            //Start location service if not running
+            if (Input.location.status == LocationServiceStatus.Stopped)
+            {
+                Input.location.Start();
+            }
+
+            //Wait for location service to initialize with timeout - 5 seconds
+            var maxWait = 5;
+            while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 0)
+            {
+                yield return new WaitForSeconds(1);
+                maxWait--;
+            }
+
+            //Handle failure case if does not start within 5 seconds
+            if (Input.location.status != LocationServiceStatus.Running)
+            {
+                Debug.LogWarning("Location service failed to start");
+                isContinuousUpdateActive = false;
+                OnContinuousUpdateStatusChanged?.Invoke(false);
+                yield break;
+            }
+
+            OnContinuousUpdateStatusChanged?.Invoke(true);
+            
             while (isContinuousUpdateActive && currentContinuousUpdateDuration < MAX_CONTINUOUS_UPDATE_DURATION)
             {
                 currentContinuousUpdateDuration += Time.deltaTime;
 
                 if (Input.location.status == LocationServiceStatus.Running)
                 {
-                    
                     continuousUpdateLatitude = Input.location.lastData.latitude;
                     continuousUpdateLongitude = Input.location.lastData.longitude;
                     continuousUpdateAltitude = Input.location.lastData.altitude;
@@ -157,13 +187,21 @@ namespace com.Klazapp.Utility
                 }
                 else
                 {
+#if UNITY_EDITOR
+                    continuousUpdateLatitude = 0;
+                    continuousUpdateLongitude = 0;
+                    continuousUpdateAltitude = 0;
+                    continuousUpdateHorizontalAccuracy = 0;
+#else
                     Debug.LogWarning("Location service is not running");
+#endif
                 }
 
                 yield return null;
             }
 
             isContinuousUpdateActive = false;
+            Input.location.Stop();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
