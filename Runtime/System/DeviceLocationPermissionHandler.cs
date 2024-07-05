@@ -124,7 +124,12 @@ namespace com.Klazapp.Utility
         {
             currentContinuousUpdateDuration = 0f;
             isContinuousUpdateActive = true;
-            StartCoroutine(UpdateContinuousLocationCo(onContinuousUpdateStatusChanged));
+        	if (onContinuousUpdateStatusChanged != null)
+            {
+                OnContinuousUpdateStatusChanged = onContinuousUpdateStatusChanged;
+            }
+
+			StartCoroutine(UpdateContinuousLocationCo(onContinuousUpdateStatusChanged));
         }
 
         public void StopContinuousLocationUpdate()
@@ -143,16 +148,11 @@ namespace com.Klazapp.Utility
         #region Modules
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private IEnumerator UpdateContinuousLocationCo(Action<bool> onContinuousUpdateStatusChanged)
-        { 
-            if (onContinuousUpdateStatusChanged != null)
-            {
-                OnContinuousUpdateStatusChanged = onContinuousUpdateStatusChanged;
-            }
-            
+        {          
             //Start location service if not running
             if (Input.location.status == LocationServiceStatus.Stopped)
             {
-                Input.location.Start();
+                Input.location.Start(DESIRED_ACCURACY_IN_METERS, UPDATE_DISTANCE_IN_METERS);
             }
 
             //Wait for location service to initialize with timeout - 5 seconds
