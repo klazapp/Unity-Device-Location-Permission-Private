@@ -26,7 +26,7 @@ namespace com.Klazapp.Utility
         //Continuous update
         private bool isContinuousUpdateActive = false;
         private float currentContinuousUpdateDuration = 0f;
-        private const float MAX_CONTINUOUS_UPDATE_DURATION = 60F;
+        private const float MAX_CONTINUOUS_UPDATE_DURATION = 600F;
         private float continuousUpdateLatitude;
         private float continuousUpdateLongitude;
         private float continuousUpdateAltitude;
